@@ -318,7 +318,7 @@ int main() {
 
 
   //printf("Enter file name to enter as table : ");
-  char *file_name[30];
+  char file_name[30];
   //scanf("%s",file_name);
   //getchar();
   strcpy(file_name,"test.txt");
