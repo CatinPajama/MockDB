@@ -22,6 +22,7 @@ struct Table
   struct Row *table[MAX_ROWS];
   int rows;
   int cols;
+  int loaded;
 };
 
 struct Database
@@ -31,17 +32,21 @@ struct Database
   struct Row *selectedRows[MAX_SELECTED_ROWS];
 };
 
-int load_table(struct Database *db, char *file_name)
-{
-  struct Table *table = db->curr_table;
-  FILE *file = fopen(file_name, "rw");
-  strcpy(table->file_name, file_name);
-  char row[MAX_COLS * MAX_STR + 1];
-  int row_no = 0;
-  while (fgets(row, sizeof(row), file))
-  {
-    char temp_row[MAX_COLS * MAX_STR + 1];
-    strcpy(temp_row, row);
+
+int load_table(struct Database* db, char *file_name) {
+  struct Table* table = db->curr_table;
+  FILE* file = fopen(file_name,"rw");
+  strcpy(table->file_name,file_name);
+  char row[MAX_COLS*MAX_STR+1];
+  int row_no=0;
+
+  // Resetting the rows and column to 0 before adding another table to current row
+  // This is vital when we load another table when one table is already loaded
+  table->rows = 0;
+  table->cols = 0;
+  while(fgets(row,sizeof(row),file)) {
+    char temp_row[MAX_COLS*MAX_STR+1];
+    strcpy(temp_row,row);
     temp_row[strcspn(temp_row, "\n")] = '\0';
     char *token;
     token = strtok(temp_row, " , ");
@@ -67,10 +72,12 @@ int load_table(struct Database *db, char *file_name)
     table->cols = cols;
   }
   fclose(file);
+  table->loaded = 1;
   return 1;
 }
 
 char query[MAX_TOKENS][MAX_STR];
+int token_count = 0;
 
 int isNumber(char *str)
 {
@@ -170,9 +177,14 @@ int handleAnd(struct Database *db)
   return 1;
 }
 
-int handleSelect(struct Database *db)
-{
-  struct Table *table = db->curr_table;
+
+
+int handleSelect(struct Database *db) {
+  struct Table* table = db->curr_table;
+  if (!table->loaded) {
+    printf("No Table Loaded...\n");
+    return -1;
+  }
   char *col = query[1];
   char *op = query[2];
   char *val = query[3];
@@ -278,20 +290,24 @@ int handleOR(struct Database *db)
   return 1;
 }
 
-void handlePrint(struct Database *db)
-{
-  for (int i = 0; i < db->selectedRowsCount; i++)
-  {
-    for (int j = 0; j < MAX_COLS; j++)
-    {
+void handlePrint(struct Database *db) {
+  if(!db->curr_table->loaded) {
+    printf("No Table Loaded...\n");
+    return;
+  }
+  for(int i = 0; i < db->selectedRowsCount;i++) {
+    for(int j = 0; j < MAX_COLS; j++) {
       printf("%s ", db->selectedRows[i]->data[j]);
     }
     printf("\n");
   }
 }
 
-void handleInsert(struct Database *db)
-{
+void handleInsert(struct Database* db) {
+  if(!db->curr_table->loaded) {
+    printf("No Table Loaded...\n");
+    return;
+  }
   char *input = query[1];
   input[strcspn(input, "\n")] = '\0';
   char *token;
@@ -312,10 +328,13 @@ void handleInsert(struct Database *db)
 void handleDelete(struct Database *db)
 {
   // TODO optimise
-  struct Table *table = db->curr_table;
-  for (int i = 0; i < db->selectedRowsCount; i++)
-  {
-    struct Row *row = db->selectedRows[i];
+  if(!db->curr_table->loaded) {
+    printf("No Table Loaded...\n");
+    return;
+  }
+  struct Table* table = db->curr_table;
+  for(int i = 0; i < db->selectedRowsCount; i++) {
+    struct Row* row = db->selectedRows[i];
     db->curr_table->rows--;
     int index = row->key;
     free(row);
@@ -337,12 +356,15 @@ void handleClear(struct Database *db)
   db->selectedRowsCount = 0;
 }
 
-void handleSave(struct Database *db)
-{
-  FILE *file = fopen(db->curr_table->file_name, "w+");
-  for (int c = 0; c < db->curr_table->cols; c++)
-  {
-    fprintf(file, "%s,", db->curr_table->columns[c]);
+
+void handleSave(struct Database *db) {
+  if(!db->curr_table->loaded) {
+    printf("No Table Loaded...\n");
+    return;
+  }
+  FILE* file = fopen(db->curr_table->file_name,"w+");
+  for(int c = 0; c < db->curr_table->cols; c++) {
+    fprintf(file,"%s,",db->curr_table->columns[c]);
   }
   fprintf(file, "\n");
   for (int row = 1; row < db->curr_table->rows; row++)
@@ -358,13 +380,46 @@ void handleSave(struct Database *db)
   fclose(file);
 }
 
-int solve(struct Database *db)
-{
-  struct Table *table = db->curr_table;
-  char *operator= query[0];
-  // printf("%s %s %s %s",operator,col,op,val);
-  if (strcmp("SELECT", operator) == 0)
-  {
+void handleCreate(struct Database *db) {
+  char* table_name = query[1];
+  char* columns = query[2];
+  struct Table* table = db->curr_table;
+  char file_name[30];
+  sprintf(file_name, "%s.csv", table_name);
+  strcpy(table->file_name,file_name);
+  
+  char *token;
+  token = strtok(columns," , ");
+  int cols=0;
+  while(token != NULL) {
+    strcpy(table->columns[cols++],token);
+    token = strtok(NULL," , ");
+  }
+  table->cols = cols;
+  table->rows = 0;
+  
+  FILE* file = fopen(db->curr_table->file_name,"w+");
+  for(int c = 0; c < db->curr_table->cols; c++) {
+    fprintf(file,"%s,",db->curr_table->columns[c]);
+  }
+  fprintf(file,"\n");
+  fclose(file);
+  load_table(db, file_name);
+}
+
+void handleLoad(struct Database *db) {
+  char* table_name = query[1];
+  struct Table* table = db->curr_table;
+  char file_name[30];
+  sprintf(file_name, "%s.csv", table_name);
+  load_table(db, file_name);
+}
+
+int solve(struct Database *db) {
+  struct Table* table = db->curr_table;
+  char *operator = query[0];
+  //printf("%s %s %s %s",operator,col,op,val);
+  if(strcmp("SELECT",operator) == 0) {
     handleSelect(db);
   }
   else if (strcmp("AND", operator) == 0)
@@ -394,6 +449,10 @@ int solve(struct Database *db)
   else if (strcmp("SAVE", operator) == 0)
   {
     handleSave(db);
+  } else if(strcmp("CREATE", operator) == 0) {
+    handleCreate(db);
+  } else if(strcmp("LOAD", operator) == 0) {
+    handleLoad(db);
   }
 
   else
@@ -408,16 +467,18 @@ int main()
 {
   struct Database mydb;
   struct Table table;
+  table.loaded = 0;
   mydb.curr_table = &table;
   mydb.selectedRowsCount = 0;
 
-  // printf("Enter file name to enter as table : ");
-  char file_name[30];
-  // scanf("%s",file_name);
-  // getchar();
-  strcpy(file_name, "test.txt");
-  // fgets(file_name,sizeof(file_name),stdin);
-  load_table(&mydb, file_name);
+
+  //printf("Enter file name to enter as table : ");
+  //char file_name[30];
+  //scanf("%s",file_name);
+  //getchar();
+  //strcpy(file_name,"test.txt");
+  //fgets(file_name,sizeof(file_name),stdin);
+  //load_table(&mydb,file_name);
   char input[MAX_TOKENS * MAX_STR];
   do
   {
@@ -432,6 +493,7 @@ int main()
       token = strtok(NULL, " ");
       token_cnt++;
     }
+    token_count = token_cnt;
     solve(&mydb);
   } while (strcmp(input, "QUIT") != 0);
   /*

@@ -1,4 +1,0 @@
-name,age,marks,address
-gaurab,12,50,aaa
-gagan,18,60,ccb
-diwas,6,10,ccc
