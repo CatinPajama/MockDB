@@ -3,22 +3,20 @@
 #include <ctype.h>
 #include <string.h>
 
-#define MAX_COLS  5
-#define MAX_TOKENS  10
-#define MAX_ROWS  100
-#define MAX_STR  30
+#define MAX_COLS 5
+#define MAX_TOKENS 10
+#define MAX_ROWS 100
+#define MAX_STR 30
 #define MAX_SELECTED_ROWS 5
 
-
-
-struct Row {
+struct Row
+{
   int key;
   char data[MAX_COLS][MAX_STR];
 };
 
-
-
-struct Table {
+struct Table
+{
   char file_name[MAX_STR];
   char columns[MAX_COLS][MAX_STR];
   struct Row *table[MAX_ROWS];
@@ -27,10 +25,11 @@ struct Table {
   int loaded;
 };
 
-struct Database {
+struct Database
+{
   struct Table *curr_table;
   int selectedRowsCount;
-  struct Row* selectedRows[MAX_SELECTED_ROWS];
+  struct Row *selectedRows[MAX_SELECTED_ROWS];
 };
 
 
@@ -50,17 +49,21 @@ int load_table(struct Database* db, char *file_name) {
     strcpy(temp_row,row);
     temp_row[strcspn(temp_row, "\n")] = '\0';
     char *token;
-    token = strtok(temp_row," , ");
-    int cols=0;
+    token = strtok(temp_row, " , ");
+    int cols = 0;
     table->table[row_no] = malloc(sizeof(struct Row));
-    //printf("%s \n",row);
-    while(token != NULL) {
-      if(row_no==0) {
-        strcpy(table->columns[cols],token);
-      } else {
-        strcpy(table->table[row_no]->data[cols],token);
+    // printf("%s \n",row);
+    while (token != NULL)
+    {
+      if (row_no == 0)
+      {
+        strcpy(table->columns[cols], token);
       }
-      token = strtok(NULL," , ");
+      else
+      {
+        strcpy(table->table[row_no]->data[cols], token);
+      }
+      token = strtok(NULL, " , ");
       cols++;
     }
     table->table[row_no]->key = row_no;
@@ -73,68 +76,102 @@ int load_table(struct Database* db, char *file_name) {
   return 1;
 }
 
-
-
 char query[MAX_TOKENS][MAX_STR];
 int token_count = 0;
 
-int isNumber(char *str) {
-  for(int i = 0; i < strlen(str) - 1; i++) {
-    if(!isdigit(str[i])) {
+int isNumber(char *str)
+{
+  for (int i = 0; i < strlen(str) - 1; i++)
+  {
+    if (!isdigit(str[i]))
+    {
       return 0;
     }
   }
   return 1;
 }
 
-int rowSatisfiesNumber(struct Row *row, char *val, int col, char *op) {
+int rowSatisfiesNumber(struct Row *row, char *val, int col, char *op)
+{
   int row_val = atoi(row->data[col]);
   int ival = atoi(val);
-  if(strcmp(op,"<") == 0) {
+  if (strcmp(op, "<") == 0)
+  {
     return row_val < ival;
-  } else if(strcmp(op,"=") == 0) {
+  }
+  else if (strcmp(op, "=") == 0)
+  {
     return row_val == ival;
-  } else if(strcmp(op,">") == 0) {
-    return row_val  > ival;
+  }
+  else if (strcmp(op, ">") == 0)
+  {
+    return row_val > ival;
   }
   return 1;
 }
-int rowSatisfiesString(int row_no, char* row[], int val,int col, char *op) {
-  // TODO
+int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
+{
+  char *row_val = row->data[col];
+  if (!strcmp(op, "="))
+  {
+    return !strcmp(row_val, val);
+  }
+  else if (!strcmp(op, "!="))
+  {
+    return strcmp(row_val, val);
+  }
+  else if (!strcmp(op, "includes"))
+  {
+    // printf("%s & %s \n", val, row_val);
+    // if (strstr(row_val, val))
+    // printf("Token Exist\n");
+    return strstr(row_val, val) != 0;
+  }
   return 0;
 }
-int handleAnd(struct Database *db) {
-  struct Table* table = db->curr_table;
+int handleAnd(struct Database *db)
+{
+  struct Table *table = db->curr_table;
   char *col = query[1];
   char *op = query[2];
   char *val = query[3];
 
-  int found=-1;
-  for(int i = 0; i < MAX_COLS; i++) {
-    if(strcmp(table->columns[i],col) == 0){
-      found=i;
+  int found = -1;
+  for (int i = 0; i < MAX_COLS; i++)
+  {
+    if (strcmp(table->columns[i], col) == 0)
+    {
+      found = i;
       break;
     }
   }
-  if(found==-1) {
+  if (found == -1)
+  {
     return 0;
   }
-  if(isNumber(val)) {
+  if (isNumber(val))
+  {
     int length = db->selectedRowsCount;
-    for(int r = 0; r < length ; r++) {
-      struct Row* row = db->selectedRows[r];
-      if(!rowSatisfiesNumber(row,val,found,op)) {
+    for (int r = 0; r < length; r++)
+    {
+      struct Row *row = db->selectedRows[r];
+      if (!rowSatisfiesNumber(row, val, found, op))
+      {
         db->selectedRowsCount--;
-        for(int i = r; i < db->selectedRowsCount; i++) {
-          db->selectedRows[i] = db->selectedRows[i+1];
-          //db->selectedRows[i]->key--;
+        for (int i = r; i < db->selectedRowsCount; i++)
+        {
+          db->selectedRows[i] = db->selectedRows[i + 1];
+          // db->selectedRows[i]->key--;
         }
       }
-    } 
-    for(int i = 0; i < db->selectedRowsCount; i++) {
-      printf("%s %d\n",db->selectedRows[i]->data[0],db->selectedRows[i]->key);
     }
-  } else {
+    for (int i = 0; i < db->selectedRowsCount; i++)
+    {
+      printf("%s %d\n", db->selectedRows[i]->data[0], db->selectedRows[i]->key);
+    }
+  }
+  else
+  {
     // HANDLE STRING TODO
   }
   return 1;
@@ -151,74 +188,103 @@ int handleSelect(struct Database *db) {
   char *col = query[1];
   char *op = query[2];
   char *val = query[3];
-
-  int found=-1;
-  for(int i = 0; i < MAX_COLS; i++) {
-    //printf("columns are : %s", table->columns[i]);
-    if(strcmp(table->columns[i],col) == 0){
-      found=i;
+  db->selectedRowsCount = 0;
+  int found = -1;
+  for (int i = 0; i < MAX_COLS; i++)
+  {
+    // printf("columns are : %s", table->columns[i]);
+    if (strcmp(table->columns[i], col) == 0)
+    {
+      found = i;
       break;
     }
   }
-  if(found==-1) {
+  if (found == -1)
+  {
     return 0;
   }
-  if(isNumber(val)) {
-    for(int row_no = 1; row_no < table->rows; row_no++) {
-      struct Row* row = table->table[row_no];
-      if(rowSatisfiesNumber(row,val,found,op)) {
-        db->selectedRows[db->selectedRowsCount++]=row; 
+  if (isNumber(val))
+  {
+    for (int row_no = 1; row_no < table->rows; row_no++)
+    {
+      struct Row *row = table->table[row_no];
+      if (rowSatisfiesNumber(row, val, found, op))
+      {
+        db->selectedRows[db->selectedRowsCount++] = row;
       }
-    } 
+    }
     /*
     for(int i = 0; i < db->selectedRowsCount; i++) {
       printf("%s %d\n",db->selectedRows[i]->data[0],db->selectedRows[i]->key);
     }
     */
-  } else {
+  }
+  else
+  {
     // HANDLE STRING TODO
+    for (int row_no = 1; row_no < table->rows; row_no++)
+    {
+      struct Row *row = table->table[row_no];
+      if (rowSatisfiesString(row, val, found, op))
+      {
+        db->selectedRows[db->selectedRowsCount++] = row;
+      }
+    }
   }
   return 1;
 }
 
-
-int handleOR(struct Database *db) {
-  struct Table* table = db->curr_table;
+int handleOR(struct Database *db)
+{
+  struct Table *table = db->curr_table;
   char *col = query[1];
   char *op = query[2];
   char *val = query[3];
 
-  int found=-1;
-  for(int i = 0; i < MAX_COLS; i++) {
-    //printf("columns are : %s", table->columns[i]);
-    if(strcmp(table->columns[i],col) == 0){
-      found=i;
+  int found = -1;
+  for (int i = 0; i < MAX_COLS; i++)
+  {
+    // printf("columns are : %s", table->columns[i]);
+    if (strcmp(table->columns[i], col) == 0)
+    {
+      found = i;
       break;
     }
   }
-  if(found==-1) {
+  if (found == -1)
+  {
     return 0;
   }
-  if(isNumber(val)) {
-    for(int row_no = 1; row_no < db->curr_table->rows; row_no++) {
-      struct Row* row = table->table[row_no];
-      int exists=-1;
-      for(int i = 0; i < db->selectedRowsCount; i++) {
-        if(row_no == db->selectedRows[i]->key) {
+  if (isNumber(val))
+  {
+    for (int row_no = 1; row_no < db->curr_table->rows; row_no++)
+    {
+      struct Row *row = table->table[row_no];
+      int exists = -1;
+      for (int i = 0; i < db->selectedRowsCount; i++)
+      {
+        if (row_no == db->selectedRows[i]->key)
+        {
           exists = i;
           break;
         }
       }
 
-      if(exists!=-1) {
+      if (exists != -1)
+      {
         continue;
       }
-      if(rowSatisfiesNumber(row,val,found,op)) {
-        db->selectedRows[db->selectedRowsCount++]=row;
-      } else {
+      if (rowSatisfiesNumber(row, val, found, op))
+      {
+        db->selectedRows[db->selectedRowsCount++] = row;
       }
-    } 
-  } else {
+      else
+      {
+      }
+    }
+  }
+  else
+  {
     // HANDLE STRING TODO
   }
   return 1;
@@ -245,21 +311,22 @@ void handleInsert(struct Database* db) {
   char *input = query[1];
   input[strcspn(input, "\n")] = '\0';
   char *token;
-  token = strtok(input," , ");
-  int cols=0;
-  //printf("%s \n",row);
+  token = strtok(input, " , ");
+  int cols = 0;
+  // printf("%s \n",row);
   db->curr_table->table[db->curr_table->rows] = malloc(sizeof(struct Row));
   db->curr_table->table[db->curr_table->rows]->key = db->curr_table->rows;
-  while(token != NULL) {
-    strcpy(db->curr_table->table[db->curr_table->rows]->data[cols],token);
-    token = strtok(NULL," , ");
+  while (token != NULL)
+  {
+    strcpy(db->curr_table->table[db->curr_table->rows]->data[cols], token);
+    token = strtok(NULL, " , ");
     cols++;
   }
   db->curr_table->rows++;
 }
 
-
-void handleDelete(struct Database *db) {
+void handleDelete(struct Database *db)
+{
   // TODO optimise
   if(!db->curr_table->loaded) {
     printf("No Table Loaded...\n");
@@ -271,19 +338,22 @@ void handleDelete(struct Database *db) {
     db->curr_table->rows--;
     int index = row->key;
     free(row);
-    for(int j = index; j < table->rows; j++) {
-      table->table[j] = table->table[j+1];
+    for (int j = index; j < table->rows; j++)
+    {
+      table->table[j] = table->table[j + 1];
       table->table[j]->key--;
     }
-  }  
+  }
 
-  for(int i = 1; i < db->curr_table->rows; i++) {
+  for (int i = 1; i < db->curr_table->rows; i++)
+  {
     printf("Currently : %s ", db->curr_table->table[i]->data[0]);
   }
 }
 
-void handleClear(struct Database *db) {
-  db->selectedRowsCount=0;
+void handleClear(struct Database *db)
+{
+  db->selectedRowsCount = 0;
 }
 
 
@@ -296,14 +366,16 @@ void handleSave(struct Database *db) {
   for(int c = 0; c < db->curr_table->cols; c++) {
     fprintf(file,"%s,",db->curr_table->columns[c]);
   }
-  fprintf(file,"\n");
-  for(int row = 1; row < db->curr_table->rows; row++) {
-    for(int c = 0; c < db->curr_table->cols; c++) {
-      //printf("%s ", db->curr_table->table[row]->data[c]);
-      fprintf(file,"%s,",db->curr_table->table[row]->data[c]);
+  fprintf(file, "\n");
+  for (int row = 1; row < db->curr_table->rows; row++)
+  {
+    for (int c = 0; c < db->curr_table->cols; c++)
+    {
+      // printf("%s ", db->curr_table->table[row]->data[c]);
+      fprintf(file, "%s,", db->curr_table->table[row]->data[c]);
     }
-    fprintf(file,"\n");
-    //printf("\n");
+    fprintf(file, "\n");
+    // printf("\n");
   }
   fclose(file);
 }
@@ -349,39 +421,55 @@ int solve(struct Database *db) {
   //printf("%s %s %s %s",operator,col,op,val);
   if(strcmp("SELECT",operator) == 0) {
     handleSelect(db);
-  } else if(strcmp("AND",operator) == 0) {
+  }
+  else if (strcmp("AND", operator) == 0)
+  {
     handleAnd(db);
-  } else if(strcmp("OR",operator) == 0) {
+  }
+  else if (strcmp("OR", operator) == 0)
+  {
     handleOR(db);
-  } else if(strcmp("PRINT",operator) == 0) {
+  }
+  else if (strcmp("PRINT", operator) == 0)
+  {
     handlePrint(db);
-  } else if(strcmp("INSERT",operator) == 0) {
+  }
+  else if (strcmp("INSERT", operator) == 0)
+  {
     handleInsert(db);
-  } else if(strcmp("DELETE",operator) == 0) {
+  }
+  else if (strcmp("DELETE", operator) == 0)
+  {
     handleDelete(db);
-  } else if(strcmp("CLEAR",operator) == 0) {
+  }
+  else if (strcmp("CLEAR", operator) == 0)
+  {
     handleClear(db);
-  } else if(strcmp("SAVE",operator) == 0) {
+  }
+  else if (strcmp("SAVE", operator) == 0)
+  {
     handleSave(db);
   } else if(strcmp("CREATE", operator) == 0) {
     handleCreate(db);
   } else if(strcmp("LOAD", operator) == 0) {
     handleLoad(db);
   }
-  
-  else {
+
+  else
+  {
     printf("BAD");
   }
-
+  strcpy(query[0], "");
   return 1;
 }
 
-int main() {
+int main()
+{
   struct Database mydb;
   struct Table table;
   table.loaded = 0;
   mydb.curr_table = &table;
-  mydb.selectedRowsCount=0;
+  mydb.selectedRowsCount = 0;
 
 
   //printf("Enter file name to enter as table : ");
@@ -392,20 +480,22 @@ int main() {
   //fgets(file_name,sizeof(file_name),stdin);
   //load_table(&mydb,file_name);
   char input[MAX_TOKENS * MAX_STR];
-  do {
+  do
+  {
     printf("=> ");
-    fgets(input,sizeof(input),stdin);
+    fgets(input, sizeof(input), stdin);
     input[strcspn(input, "\n")] = '\0';
-    char* token = strtok(input," ");
-    int token_cnt=0;
-    while(token != NULL) {
-      strcpy(query[token_cnt],token);
-      token = strtok(NULL," ");
+    char *token = strtok(input, " ");
+    int token_cnt = 0;
+    while (token != NULL)
+    {
+      strcpy(query[token_cnt], token);
+      token = strtok(NULL, " ");
       token_cnt++;
     }
     token_count = token_cnt;
     solve(&mydb);
-  } while(strcmp(input,"QUIT") != 0);
+  } while (strcmp(input, "QUIT") != 0);
   /*
   strcpy(query[0],"SELECT");
   strcpy(query[1],"age");
@@ -413,7 +503,7 @@ int main() {
   strcpy(query[3],"10");
   solve(&mydb);
   */
-  
+
   /*
   for(int i = 0; i < mydb.selectedRowsCount; i++) {
     printf("%d ",mydb.selectedRows[i]);
