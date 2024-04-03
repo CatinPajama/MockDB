@@ -1,39 +1,10 @@
 #include <stdio.h>
+#include "database.h"
+#include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <string.h>
 
-#define MAX_COLS 5
-#define MAX_TOKENS 10
-#define MAX_ROWS 100
-#define MAX_STR 30
-#define MAX_SELECTED_ROWS 5
-
-struct Row
-{
-  int key;
-  char data[MAX_COLS][MAX_STR];
-};
-
-struct Table
-{
-  char file_name[MAX_STR];
-  char columns[MAX_COLS][MAX_STR];
-  struct Row *table[MAX_ROWS];
-  int rows;
-  int cols;
-  int loaded;
-};
-
-struct Database
-{
-  struct Table *curr_table;
-  int selectedRowsCount;
-  struct Row *selectedRows[MAX_SELECTED_ROWS];
-};
-
-
-int load_table(struct Database* db, char *file_name) {
+static int load_table(struct Database* db, char *file_name) {
   struct Table* table = db->curr_table;
   FILE* file = fopen(file_name,"rw");
   strcpy(table->file_name,file_name);
@@ -76,10 +47,7 @@ int load_table(struct Database* db, char *file_name) {
   return 1;
 }
 
-char query[MAX_TOKENS][MAX_STR];
-int token_count = 0;
-
-int isNumber(char *str)
+static int isNumber(char *str)
 {
   for (int i = 0; i < strlen(str) - 1; i++)
   {
@@ -91,7 +59,7 @@ int isNumber(char *str)
   return 1;
 }
 
-int rowSatisfiesNumber(struct Row *row, char *val, int col, char *op)
+static int rowSatisfiesNumber(struct Row *row, char *val, int col, char *op)
 {
   int row_val = atoi(row->data[col]);
   int ival = atoi(val);
@@ -109,7 +77,7 @@ int rowSatisfiesNumber(struct Row *row, char *val, int col, char *op)
   }
   return 1;
 }
-int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
+static int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
 {
   char *row_val = row->data[col];
   if (!strcmp(op, "="))
@@ -129,6 +97,7 @@ int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
   }
   return 0;
 }
+
 int handleAnd(struct Database *db)
 {
   struct Table *table = db->curr_table;
@@ -176,7 +145,6 @@ int handleAnd(struct Database *db)
   }
   return 1;
 }
-
 
 
 int handleSelect(struct Database *db) {
@@ -413,105 +381,4 @@ void handleLoad(struct Database *db) {
   char file_name[30];
   sprintf(file_name, "%s.csv", table_name);
   load_table(db, file_name);
-}
-
-int solve(struct Database *db) {
-  struct Table* table = db->curr_table;
-  char *operator = query[0];
-  //printf("%s %s %s %s",operator,col,op,val);
-  if(strcmp("SELECT",operator) == 0) {
-    handleSelect(db);
-  }
-  else if (strcmp("AND", operator) == 0)
-  {
-    handleAnd(db);
-  }
-  else if (strcmp("OR", operator) == 0)
-  {
-    handleOR(db);
-  }
-  else if (strcmp("PRINT", operator) == 0)
-  {
-    handlePrint(db);
-  }
-  else if (strcmp("INSERT", operator) == 0)
-  {
-    handleInsert(db);
-  }
-  else if (strcmp("DELETE", operator) == 0)
-  {
-    handleDelete(db);
-  }
-  else if (strcmp("CLEAR", operator) == 0)
-  {
-    handleClear(db);
-  }
-  else if (strcmp("SAVE", operator) == 0)
-  {
-    handleSave(db);
-  } else if(strcmp("CREATE", operator) == 0) {
-    handleCreate(db);
-  } else if(strcmp("LOAD", operator) == 0) {
-    handleLoad(db);
-  }
-
-  else
-  {
-    printf("BAD");
-  }
-  strcpy(query[0], "");
-  return 1;
-}
-
-int main()
-{
-  struct Database mydb;
-  struct Table table;
-  table.loaded = 0;
-  mydb.curr_table = &table;
-  mydb.selectedRowsCount = 0;
-
-
-  //printf("Enter file name to enter as table : ");
-  //char file_name[30];
-  //scanf("%s",file_name);
-  //getchar();
-  //strcpy(file_name,"test.txt");
-  //fgets(file_name,sizeof(file_name),stdin);
-  //load_table(&mydb,file_name);
-  char input[MAX_TOKENS * MAX_STR];
-  do
-  {
-    printf("=> ");
-    fgets(input, sizeof(input), stdin);
-    input[strcspn(input, "\n")] = '\0';
-    char *token = strtok(input, " ");
-    int token_cnt = 0;
-    while (token != NULL)
-    {
-      strcpy(query[token_cnt], token);
-      token = strtok(NULL, " ");
-      token_cnt++;
-    }
-    token_count = token_cnt;
-    solve(&mydb);
-  } while (strcmp(input, "QUIT") != 0);
-  /*
-  strcpy(query[0],"SELECT");
-  strcpy(query[1],"age");
-  strcpy(query[2],">");
-  strcpy(query[3],"10");
-  solve(&mydb);
-  */
-
-  /*
-  for(int i = 0; i < mydb.selectedRowsCount; i++) {
-    printf("%d ",mydb.selectedRows[i]);
-  }
-  strcpy(query[0],"AND");
-  strcpy(query[1],"marks");
-  strcpy(query[2],">");
-  strcpy(query[3],"50");
-  solve(&mydb);
-  */
 }
