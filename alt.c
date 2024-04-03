@@ -325,7 +325,13 @@ void handleCreate(struct Database *db) {
   }
   table->cols = cols;
   table->rows = 0;
-  handleSave(db);
+  
+  FILE* file = fopen(db->curr_table->file_name,"w+");
+  for(int c = 0; c < db->curr_table->cols; c++) {
+    fprintf(file,"%s,",db->curr_table->columns[c]);
+  }
+  fprintf(file,"\n");
+  fclose(file);
   load_table(db, file_name);
 }
 
