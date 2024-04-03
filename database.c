@@ -110,7 +110,6 @@ int handleAnd(struct Database *db, int *index)
   char *op = db->query->data[*index+2];
   char *val = db->query->data[*index+3];
   
-
   *index += 4;
 
   int found = -1;
@@ -129,7 +128,8 @@ int handleAnd(struct Database *db, int *index)
   int isnum=0;
   isnum += isNumber(val);
   int length = db->selectedRowsCount;
-  for (int r = 0; r < length; r++)
+  int r = 0;
+  while(r < db->selectedRowsCount)
   {
     struct Row *row = db->selectedRows[r];
     int satisfies=0;
@@ -143,6 +143,8 @@ int handleAnd(struct Database *db, int *index)
         db->selectedRows[i] = db->selectedRows[i + 1];
         // db->selectedRows[i]->key--;
       }
+    } else {
+      r++;
     }
   }
   return 1;
