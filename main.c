@@ -11,8 +11,11 @@ int solve(struct Database *db) {
   struct Table* table = db->curr_table;
   char *operator = db->query->data[0];
   //printf("%s %s %s %s",operator,col,op,val);
-  handleQuery(db);
-  if (strcmp("PRINT", operator) == 0)
+  //handleQuery(db);
+  if (strcmp("SELECT", operator) == 0)
+  {
+    handleQuery(db);
+  } else if (strcmp("PRINT", operator) == 0)
   {
     handlePrint(db);
   }

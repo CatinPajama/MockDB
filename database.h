@@ -75,7 +75,7 @@ select rows
 2,kevin,12
 3,stuart,15
 */
-int handleSelect(struct Database *db, int *index);
+int handleSelect(struct Database *db);
 
 /*
 Used to narrow the previous select introcuing extra constarint
@@ -87,8 +87,8 @@ AND name = kevin
 select rows
 2,kevin,12
 */
-int handleAnd(struct Database *db, int *index);
-int handleOR(struct Database *db, int *index);
+int handleAnd(struct Database *db, int offset_index);
+int handleOR(struct Database *db, int offset_index);
 
 /*
 Clears any previous selection

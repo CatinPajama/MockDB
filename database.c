@@ -98,20 +98,13 @@ static int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
   return 0;
 }
 
-int handleAnd(struct Database *db, int *index)
+int handleAnd(struct Database *db, int offset_index)
 {
-  if(*index >= db->query->query_len)  return 0;
-  char *operator = db->query->data[*index];
-  if(strcmp("AND",operator) != 0) {
-    return 0;
-  }
-  struct Table *table = db->curr_table;
-  char *col = db->query->data[*index+1];
-  char *op = db->query->data[*index+2];
-  char *val = db->query->data[*index+3];
   
-
-  *index += 4;
+  struct Table *table = db->curr_table;
+  char *col = db->query->data[offset_index+1];
+  char *op = db->query->data[offset_index+2];
+  char *val = db->query->data[offset_index+3];
 
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
@@ -129,7 +122,8 @@ int handleAnd(struct Database *db, int *index)
   int isnum=0;
   isnum += isNumber(val);
   int length = db->selectedRowsCount;
-  for (int r = 0; r < length; r++)
+  int r = 0;
+  while(r < db->selectedRowsCount)
   {
     struct Row *row = db->selectedRows[r];
     int satisfies=0;
@@ -143,28 +137,24 @@ int handleAnd(struct Database *db, int *index)
         db->selectedRows[i] = db->selectedRows[i + 1];
         // db->selectedRows[i]->key--;
       }
+    } else {
+      r++;
     }
   }
   return 1;
 }
 
 
-int handleSelect(struct Database *db, int *index) {
-  if(*index >= db->query->query_len)  return 0;
-  char *operator = db->query->data[0];
-  if(strcmp("SELECT",operator) != 0) {
-    return 0;
-  }
+int handleSelect(struct Database *db) {
   struct Table* table = db->curr_table;
   if (!table->loaded) {
     printf("No Table Loaded...\n");
     return -1;
   }
-  char *col = db->query->data[*index+1];
-  char *op = db->query->data[*index+2];
-  char *val = db->query->data[*index+3];
+  char *col = db->query->data[1];
+  char *op = db->query->data[2];
+  char *val = db->query->data[3];
 
-  *index+=4;
   db->selectedRowsCount = 0;
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
@@ -211,20 +201,13 @@ int handleSelect(struct Database *db, int *index) {
   return 1;
 }
 
-int handleOR(struct Database *db, int *index)
+int handleOR(struct Database *db, int offset_index)
 {
-  if(*index >= db->query->query_len)  return 0;
-
-  char *operator = db->query->data[*index];
   //printf("%s %s %s %s",operator,col,op,val);
-  if(strcmp("OR",operator) != 0) {
-    return 0;
-  }
   struct Table *table = db->curr_table;
-  char *col = db->query->data[*index+1];
-  char *op = db->query->data[*index+2];
-  char *val = db->query->data[*index+3];
-  *index += 4;
+  char *col = db->query->data[offset_index+1];
+  char *op = db->query->data[offset_index+2];
+  char *val = db->query->data[offset_index+3];
 
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
@@ -395,15 +378,12 @@ void handleLoad(struct Database *db) {
 }
 
 void handleQuery(struct Database* db) {
-  int index=0;
-
-  handleSelect(db,&index);
-  while(index < db->query->query_len) {
-    int status=0;
-    status|=handleAnd(db,&index) > 0;
-    status|=handleOR(db,&index) > 0;
-    if(!status) {
-      break;
+  handleSelect(db);
+  for(int i = 0; i < db->query->query_len; i+=4) {
+    if (strcmp(db->query->data[i], "AND") == 0) {
+      handleAnd(db, i);
+    } else if (strcmp(db->query->data[i], "AND") == 0) {
+      handleOR(db, i);
     }
   }
 }
