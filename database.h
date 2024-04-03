@@ -1,11 +1,11 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#define MAX_COLS 5
-#define MAX_TOKENS 10
+#define MAX_COLS 20
+#define MAX_TOKENS 40
 #define MAX_ROWS 100
-#define MAX_STR 30
-#define MAX_SELECTED_ROWS 5
+#define MAX_STR 100
+#define MAX_SELECTED_ROWS 500
 
 extern char query[MAX_TOKENS][MAX_STR];
 extern int token_count;
@@ -26,11 +26,17 @@ struct Table
   int loaded;
 };
 
+struct Query {
+  char data[MAX_TOKENS][MAX_STR];
+  int query_len;
+};
+
 struct Database
 {
   struct Table *curr_table;
   int selectedRowsCount;
   struct Row *selectedRows[MAX_SELECTED_ROWS];
+  struct Query *query;
 };
 
 
@@ -69,7 +75,7 @@ select rows
 2,kevin,12
 3,stuart,15
 */
-int handleSelect(struct Database *db);
+int handleSelect(struct Database *db, int *index);
 
 /*
 Used to narrow the previous select introcuing extra constarint
@@ -81,8 +87,8 @@ AND name = kevin
 select rows
 2,kevin,12
 */
-int handleAnd(struct Database *db);
-int handleOR(struct Database *db);
+int handleAnd(struct Database *db, int *index);
+int handleOR(struct Database *db, int *index);
 
 /*
 Clears any previous selection
@@ -95,5 +101,5 @@ Used to print the previously selected rows
 void handlePrint(struct Database *db);
 
 void handleSave(struct Database *db);
-
+void handleQuery(struct Database* db);
 #endif

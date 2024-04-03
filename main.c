@@ -4,25 +4,15 @@
 #include <string.h>
 #include "database.h"
 
-char query[MAX_TOKENS][MAX_STR];
+//char query[MAX_TOKENS][MAX_STR];
 int token_count = 0;
 
 int solve(struct Database *db) {
   struct Table* table = db->curr_table;
-  char *operator = query[0];
+  char *operator = db->query->data[0];
   //printf("%s %s %s %s",operator,col,op,val);
-  if(strcmp("SELECT",operator) == 0) {
-    handleSelect(db);
-  }
-  else if (strcmp("AND", operator) == 0)
-  {
-    handleAnd(db);
-  }
-  else if (strcmp("OR", operator) == 0)
-  {
-    handleOR(db);
-  }
-  else if (strcmp("PRINT", operator) == 0)
+  handleQuery(db);
+  if (strcmp("PRINT", operator) == 0)
   {
     handlePrint(db);
   }
@@ -47,11 +37,7 @@ int solve(struct Database *db) {
     handleLoad(db);
   }
 
-  else
-  {
-    printf("BAD");
-  }
-  strcpy(query[0], "");
+//  strcpy(query[0], "");
   return 1;
 }
 
@@ -59,9 +45,12 @@ int main()
 {
   struct Database mydb;
   struct Table table;
+  struct Query query;
   table.loaded = 0;
+  query.query_len=0;
   mydb.curr_table = &table;
   mydb.selectedRowsCount = 0;
+  mydb.query = &query;
 
   char input[MAX_TOKENS * MAX_STR];
   do
@@ -71,11 +60,13 @@ int main()
     input[strcspn(input, "\n")] = '\0';
     char *token = strtok(input, " ");
     int token_cnt = 0;
+    mydb.query->query_len=0;
     while (token != NULL)
     {
-      strcpy(query[token_cnt], token);
+      strcpy(mydb.query->data[token_cnt], token);
       token = strtok(NULL, " ");
       token_cnt++;
+      mydb.query->query_len++;
     }
     token_count = token_cnt;
     solve(&mydb);

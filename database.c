@@ -80,30 +80,38 @@ static int rowSatisfiesNumber(struct Row *row, char *val, int col, char *op)
 static int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
 {
   char *row_val = row->data[col];
-  if (!strcmp(op, "="))
+  if (strcmp(op, "=") == 0)
   {
-    return !strcmp(row_val, val);
+    return strcmp(row_val, val) == 0;
   }
-  else if (!strcmp(op, "!="))
+  else if (strcmp(op, "!=") == 0)
   {
-    return strcmp(row_val, val);
+    return strcmp(row_val, val) != 0;
   }
   else if (!strcmp(op, "includes"))
   {
     // printf("%s & %s \n", val, row_val);
     // if (strstr(row_val, val))
     // printf("Token Exist\n");
-    return strstr(row_val, val) != 0;
+    return strstr(row_val, val) != NULL;
   }
   return 0;
 }
 
-int handleAnd(struct Database *db)
+int handleAnd(struct Database *db, int *index)
 {
+  if(*index >= db->query->query_len)  return 0;
+  char *operator = db->query->data[*index];
+  if(strcmp("AND",operator) != 0) {
+    return 0;
+  }
   struct Table *table = db->curr_table;
-  char *col = query[1];
-  char *op = query[2];
-  char *val = query[3];
+  char *col = db->query->data[*index+1];
+  char *op = db->query->data[*index+2];
+  char *val = db->query->data[*index+3];
+  
+
+  *index += 4;
 
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
@@ -118,44 +126,45 @@ int handleAnd(struct Database *db)
   {
     return 0;
   }
-  if (isNumber(val))
+  int isnum=0;
+  isnum += isNumber(val);
+  int length = db->selectedRowsCount;
+  for (int r = 0; r < length; r++)
   {
-    int length = db->selectedRowsCount;
-    for (int r = 0; r < length; r++)
+    struct Row *row = db->selectedRows[r];
+    int satisfies=0;
+    if(isnum) satisfies=rowSatisfiesNumber(row, val, found, op);
+    else satisfies = rowSatisfiesString(row,val,found,op);
+    if (!satisfies)
     {
-      struct Row *row = db->selectedRows[r];
-      if (!rowSatisfiesNumber(row, val, found, op))
+      db->selectedRowsCount--;
+      for (int i = r; i < db->selectedRowsCount; i++)
       {
-        db->selectedRowsCount--;
-        for (int i = r; i < db->selectedRowsCount; i++)
-        {
-          db->selectedRows[i] = db->selectedRows[i + 1];
-          // db->selectedRows[i]->key--;
-        }
+        db->selectedRows[i] = db->selectedRows[i + 1];
+        // db->selectedRows[i]->key--;
       }
     }
-    for (int i = 0; i < db->selectedRowsCount; i++)
-    {
-      printf("%s %d\n", db->selectedRows[i]->data[0], db->selectedRows[i]->key);
-    }
-  }
-  else
-  {
-    // HANDLE STRING TODO
   }
   return 1;
 }
 
 
-int handleSelect(struct Database *db) {
+int handleSelect(struct Database *db, int *index) {
+  if(*index >= db->query->query_len)  return 0;
+  char *operator = db->query->data[0];
+  if(strcmp("SELECT",operator) != 0) {
+    return 0;
+  }
   struct Table* table = db->curr_table;
   if (!table->loaded) {
     printf("No Table Loaded...\n");
     return -1;
   }
-  char *col = query[1];
-  char *op = query[2];
-  char *val = query[3];
+  char *col = db->query->data[*index+1];
+  char *op = db->query->data[*index+2];
+  char *val = db->query->data[*index+3];
+
+  *index+=4;
   db->selectedRowsCount = 0;
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
@@ -202,12 +211,20 @@ int handleSelect(struct Database *db) {
   return 1;
 }
 
-int handleOR(struct Database *db)
+int handleOR(struct Database *db, int *index)
 {
+  if(*index >= db->query->query_len)  return 0;
+
+  char *operator = db->query->data[*index];
+  //printf("%s %s %s %s",operator,col,op,val);
+  if(strcmp("OR",operator) != 0) {
+    return 0;
+  }
   struct Table *table = db->curr_table;
-  char *col = query[1];
-  char *op = query[2];
-  char *val = query[3];
+  char *col = db->query->data[*index+1];
+  char *op = db->query->data[*index+2];
+  char *val = db->query->data[*index+3];
+  *index += 4;
 
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
@@ -223,37 +240,31 @@ int handleOR(struct Database *db)
   {
     return 0;
   }
-  if (isNumber(val))
+  int isnum = isNumber(val);
+  for (int row_no = 1; row_no < db->curr_table->rows; row_no++)
   {
-    for (int row_no = 1; row_no < db->curr_table->rows; row_no++)
+    struct Row *row = table->table[row_no];
+    int exists = -1;
+    for (int i = 0; i < db->selectedRowsCount; i++)
     {
-      struct Row *row = table->table[row_no];
-      int exists = -1;
-      for (int i = 0; i < db->selectedRowsCount; i++)
+      if (row_no == db->selectedRows[i]->key)
       {
-        if (row_no == db->selectedRows[i]->key)
-        {
-          exists = i;
-          break;
-        }
-      }
-
-      if (exists != -1)
-      {
-        continue;
-      }
-      if (rowSatisfiesNumber(row, val, found, op))
-      {
-        db->selectedRows[db->selectedRowsCount++] = row;
-      }
-      else
-      {
+        exists = i;
+        break;
       }
     }
-  }
-  else
-  {
-    // HANDLE STRING TODO
+
+    if (exists != -1)
+    {
+      continue;
+    }
+    int satisfies=0;
+    if(isnum) satisfies=rowSatisfiesNumber(row,val,found,op);
+    else satisfies=rowSatisfiesString(row,val,found,op);
+    if (satisfies)
+    {
+      db->selectedRows[db->selectedRowsCount++] = row;
+    }
   }
   return 1;
 }
@@ -276,7 +287,7 @@ void handleInsert(struct Database* db) {
     printf("No Table Loaded...\n");
     return;
   }
-  char *input = query[1];
+  char *input = db->query->data[1];
   input[strcspn(input, "\n")] = '\0';
   char *token;
   token = strtok(input, " , ");
@@ -349,8 +360,8 @@ void handleSave(struct Database *db) {
 }
 
 void handleCreate(struct Database *db) {
-  char* table_name = query[1];
-  char* columns = query[2];
+  char* table_name = db->query->data[1];
+  char* columns = db->query->data[2];
   struct Table* table = db->curr_table;
   char file_name[30];
   sprintf(file_name, "%s.csv", table_name);
@@ -376,9 +387,23 @@ void handleCreate(struct Database *db) {
 }
 
 void handleLoad(struct Database *db) {
-  char* table_name = query[1];
+  char* table_name = db->query->data[1];
   struct Table* table = db->curr_table;
   char file_name[30];
   sprintf(file_name, "%s.csv", table_name);
   load_table(db, file_name);
+}
+
+void handleQuery(struct Database* db) {
+  int index=0;
+
+  handleSelect(db,&index);
+  while(index < db->query->query_len) {
+    int status=0;
+    status|=handleAnd(db,&index) > 0;
+    status|=handleOR(db,&index) > 0;
+    if(!status) {
+      break;
+    }
+  }
 }
