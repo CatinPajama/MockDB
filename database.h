@@ -71,24 +71,14 @@ id,name,age
 /*
 SELECT age > 10
 
-select rows
+selected rows
 2,kevin,12
 3,stuart,15
+
+Works with AND and OR too
+as SELECT age > 10 AND name = kevin return 2,kevin,12 only
 */
-int handleSelect(struct Database *db);
-
-/*
-Used to narrow the previous select introcuing extra constarint
-Looks like:
-
-SELECT age > 10
-AND name = kevin
-
-select rows
-2,kevin,12
-*/
-int handleAnd(struct Database *db, int offset_index);
-int handleOR(struct Database *db, int offset_index);
+int handleQuery(struct Database *db);
 
 /*
 Clears any previous selection
@@ -101,5 +91,4 @@ Used to print the previously selected rows
 void handlePrint(struct Database *db);
 
 void handleSave(struct Database *db);
-void handleQuery(struct Database* db);
 #endif
