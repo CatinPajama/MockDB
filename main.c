@@ -1,3 +1,4 @@
+#include <concurrencysal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -6,7 +7,20 @@
 
 //char query[MAX_TOKENS][MAX_STR];
 int token_count = 0;
+void handleHelp(){
+    FILE *file = fopen("helpdoc.txt","r");
+    if (!file)
+      return;
 
+    do
+    {
+        char c = fgetc(file);
+        if (feof(file))
+            break ;
+        printf("%c", c);
+    }  while(1);
+
+}
 int solve(struct Database *db) {
   struct Table* table = db->curr_table;
   char *operator = db->query->data[0];
@@ -36,9 +50,18 @@ int solve(struct Database *db) {
     handleSave(db);
   } else if(strcmp("CREATE", operator) == 0) {
     handleCreate(db);
-  } else if(strcmp("LOAD", operator) == 0) {
+  }
+  else if(strcmp("LOAD", operator) == 0) {
     handleLoad(db);
   }
+  else if(strcmp("HELP", operator) == 0) {
+    handleHelp();
+  }
+  else if(strcmp("QUIT", operator) == 0) {}
+  else{
+    printf("BAD: type HELP\n");
+  }
+
 
 //  strcpy(query[0], "");
   return 1;

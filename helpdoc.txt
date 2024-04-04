@@ -1,0 +1,22 @@
+TOPIC:
+    MockDB Help System
+
+COMMANDS:
+    HELP        []                        Help Docs
+    CREATE      [table_name][...fields]   Creates a table_name
+    LOAD        [table_name]              Loads Table
+    INSERT      [...field_value]          Inserts fields value to Table
+    SAVE        []                        Saves Table to File 
+    SELECT      [operator][value]         Selects Rows Matching operator
+    PRINT       []                        Prints Selected Rows
+    DELETE      []                        
+    CLEAR       []                        
+    QUIT        []                        Quits the program
+
+OPERATORS:
+    =           [field_name][Value]       Exact Match
+    !=          [field_name][Value]       NotExact Match
+    >           [field_name][Value]       Compares Greater
+    <           [field_name][Value]       Compares Smaller
+    includes    [field_name][Value]       Check Include String
+    !include    [field_name][Value]       Check NotInclude String
