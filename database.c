@@ -377,13 +377,50 @@ void handleLoad(struct Database *db) {
   load_table(db, file_name);
 }
 
-void handleQuery(struct Database* db) {
+
+void handleOrderBy(struct Database *db, int offset_index) {
+  char* col = db->query->data[offset_index+1];
+  int found=-1;
+  for(int i = 0; i < db->curr_table->cols; i++) {
+    if(strcmp(db->curr_table->columns[i],col) == 0){
+      found=i;
+      break;
+    }
+  }
+  printf("%s %d",col,found);
+  int isNum = isNumber(db->curr_table->table[0]->data[found]);
+  for(int i = 0; i < db->selectedRowsCount; i++) {
+    for(int j = i + 1; j < db->selectedRowsCount; j++) {
+      int firstMore=0;
+      if(!isNum) firstMore=strcmp(db->selectedRows[i]->data[found],db->selectedRows[j]->data[found]);
+      else {
+        int a = atoi(db->selectedRows[i]->data[found]);
+        int b = atoi(db->selectedRows[j]->data[found]);
+        if(a > b) firstMore = 1;
+        else if(a < b)firstMore = -1;
+      }
+      if(firstMore>0){
+        struct Row* temp = db->selectedRows[i];
+        db->selectedRows[i] = db->selectedRows[j];
+        db->selectedRows[j] = temp;
+      }
+    }
+  }
+}
+
+int handleQuery(struct Database* db) {
   handleSelect(db);
   for(int i = 0; i < db->query->query_len; i+=4) {
     if (strcmp(db->query->data[i], "AND") == 0) {
       handleAnd(db, i);
-    } else if (strcmp(db->query->data[i], "AND") == 0) {
+    } else if (strcmp(db->query->data[i], "OR") == 0) {
       handleOR(db, i);
+    } else if (strcmp(db->query->data[i],"ORDERBY") == 0) {
+      handleOrderBy(db, i);
+      i-=2;
     }
   }
+  return 1;
 }
+
+

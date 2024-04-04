@@ -91,4 +91,6 @@ Used to print the previously selected rows
 void handlePrint(struct Database *db);
 
 void handleSave(struct Database *db);
+
+void handleOrderBy(struct Database *db, int offset_index);
 #endif
