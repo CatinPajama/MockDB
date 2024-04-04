@@ -449,6 +449,13 @@ void handleOrderBy(struct Database *db, int offset_index) {
   }
 }
 
+void handleSchema(struct Database* db) {
+  for(int i = 0; i < db->curr_table->cols; i++) {
+    printf("%s ", db->curr_table->columns[i]);
+  }
+  printf("\n");
+}
+
 int handleQuery(struct Database* db) {
   int select_tokens = handleSelect(db);
   for(int i = select_tokens; i < db->query->query_len;) {
