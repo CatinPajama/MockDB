@@ -6,7 +6,11 @@
 
 static int load_table(struct Database* db, char *file_name) {
   struct Table* table = db->curr_table;
-  FILE* file = fopen(file_name,"rw");
+  FILE* file = fopen(file_name,"r");
+  if(!file){
+    printf("Failed To Load File\n");
+    return -1;
+}
   strcpy(table->file_name,file_name);
   char row[MAX_COLS*MAX_STR+1];
   int row_no=0;
@@ -75,6 +79,10 @@ static int rowSatisfiesNumber(struct Row *row, char *val, int col, char *op)
   {
     return row_val > ival;
   }
+  else if (strcmp(op, "*") == 0)
+  {
+    return 1;
+  }
   return 1;
 }
 static int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
@@ -90,10 +98,15 @@ static int rowSatisfiesString(struct Row *row, char *val, int col, char *op)
   }
   else if (!strcmp(op, "includes"))
   {
-    // printf("%s & %s \n", val, row_val);
-    // if (strstr(row_val, val))
-    // printf("Token Exist\n");
     return strstr(row_val, val) != NULL;
+  }
+  else if (!strcmp(op, "!includes"))
+  {
+    return strstr(row_val, val) == NULL;
+  }
+  else if (strcmp(op, "*") == 0)
+  {
+    return 1;
   }
   return 0;
 }
@@ -117,6 +130,7 @@ int handleAnd(struct Database *db, int offset_index)
   }
   if (found == -1)
   {
+      printf("Feild not Found\n");
     return 0;
   }
   int isnum=0;
@@ -141,6 +155,7 @@ int handleAnd(struct Database *db, int offset_index)
       r++;
     }
   }
+  printf("%d rows selected\n",db->selectedRowsCount);
   return 1;
 }
 
@@ -159,7 +174,7 @@ int handleSelect(struct Database *db) {
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
   {
-    // printf("columns are : %s", table->columns[i]);
+     //printf("columns are : %s", table->columns[i]);
     if (strcmp(table->columns[i], col) == 0)
     {
       found = i;
@@ -168,6 +183,7 @@ int handleSelect(struct Database *db) {
   }
   if (found == -1)
   {
+      printf("Feild not Found\n");
     return 0;
   }
   if (isNumber(val))
@@ -198,6 +214,7 @@ int handleSelect(struct Database *db) {
       }
     }
   }
+  printf("%d rows selected\n",db->selectedRowsCount);
   return 1;
 }
 
@@ -221,6 +238,7 @@ int handleOR(struct Database *db, int offset_index)
   }
   if (found == -1)
   {
+    printf("Feild not Found\n");
     return 0;
   }
   int isnum = isNumber(val);
@@ -249,6 +267,7 @@ int handleOR(struct Database *db, int offset_index)
       db->selectedRows[db->selectedRowsCount++] = row;
     }
   }
+  printf("%d rows selected\n",db->selectedRowsCount);
   return 1;
 }
 
@@ -257,6 +276,13 @@ void handlePrint(struct Database *db) {
     printf("No Table Loaded...\n");
     return;
   }
+  if(db->selectedRowsCount<1){
+      printf("%d rows selected\n",db->selectedRowsCount);
+      return;
+  }
+  //for(int i=0;i<db->curr_table->cols;i++){
+    //  printf("%s",db->curr_table->columns[i]);
+  //}
   for(int i = 0; i < db->selectedRowsCount;i++) {
     for(int j = 0; j < MAX_COLS; j++) {
       printf("%s ", db->selectedRows[i]->data[j]);
@@ -377,7 +403,7 @@ void handleLoad(struct Database *db) {
   load_table(db, file_name);
 }
 
-void handleQuery(struct Database* db) {
+int handleQuery(struct Database* db) {
   handleSelect(db);
   for(int i = 0; i < db->query->query_len; i+=4) {
     if (strcmp(db->query->data[i], "AND") == 0) {
@@ -386,4 +412,5 @@ void handleQuery(struct Database* db) {
       handleOR(db, i);
     }
   }
+  return 1;
 }
