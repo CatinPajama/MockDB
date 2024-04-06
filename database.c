@@ -161,12 +161,27 @@ int handleAnd(struct Database *db, int offset_index)
 
 
 int handleSelect(struct Database *db) {
+  // Returns the number of query tokens used if successful
+  // Else return 0 or negative number;
+
   struct Table* table = db->curr_table;
   if (!table->loaded) {
     printf("No Table Loaded...\n");
     return -1;
   }
   char *col = db->query->data[1];
+
+  if (strcmp(col, "*") == 0) {
+    db->selectedRowsCount = 0;
+    for (int row_no = 1; row_no < table->rows; row_no++)
+    {
+      struct Row *row = table->table[row_no];
+      db->selectedRows[db->selectedRowsCount++] = row;
+    }
+    printf("%d rows selected\n",db->selectedRowsCount);
+    return 2;
+  }
+
   char *op = db->query->data[2];
   char *val = db->query->data[3];
 
@@ -215,7 +230,7 @@ int handleSelect(struct Database *db) {
     }
   }
   printf("%d rows selected\n",db->selectedRowsCount);
-  return 1;
+  return 4;
 }
 
 int handleOR(struct Database *db, int offset_index)
@@ -413,7 +428,7 @@ void handleOrderBy(struct Database *db, int offset_index) {
       break;
     }
   }
-  printf("%s %d",col,found);
+  //printf("%s %d",col,found);
   int isNum = isNumber(db->curr_table->table[0]->data[found]);
   for(int i = 0; i < db->selectedRowsCount; i++) {
     for(int j = i + 1; j < db->selectedRowsCount; j++) {
@@ -434,16 +449,25 @@ void handleOrderBy(struct Database *db, int offset_index) {
   }
 }
 
+void handleSchema(struct Database* db) {
+  for(int i = 0; i < db->curr_table->cols; i++) {
+    printf("%s ", db->curr_table->columns[i]);
+  }
+  printf("\n");
+}
+
 int handleQuery(struct Database* db) {
-  handleSelect(db);
-  for(int i = 0; i < db->query->query_len; i+=4) {
+  int select_tokens = handleSelect(db);
+  for(int i = select_tokens; i < db->query->query_len;) {
     if (strcmp(db->query->data[i], "AND") == 0) {
       handleAnd(db, i);
+      i += 4;
     } else if (strcmp(db->query->data[i], "OR") == 0) {
       handleOR(db, i);
+      i += 4;
     } else if (strcmp(db->query->data[i],"ORDERBY") == 0) {
       handleOrderBy(db, i);
-      i-=2;
+      i += 2;
     }
   }
   return 1;
