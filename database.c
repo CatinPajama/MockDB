@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+
+
 static int load_table(struct Database* db, char *file_name) {
   struct Table* table = db->curr_table;
   FILE* file = fopen(file_name,"r");
@@ -130,7 +132,7 @@ int handleAnd(struct Database *db, int offset_index)
   }
   if (found == -1)
   {
-      printf("Feild not Found\n");
+      printf("Field not Found\n");
     return 0;
   }
   int isnum=0;
@@ -155,7 +157,7 @@ int handleAnd(struct Database *db, int offset_index)
       r++;
     }
   }
-  printf("%d rows selected\n",db->selectedRowsCount);
+  //printf("%d rows selected\n",db->selectedRowsCount);
   return 1;
 }
 
@@ -166,11 +168,42 @@ int handleSelect(struct Database *db) {
     printf("No Table Loaded...\n");
     return -1;
   }
-  char *col = db->query->data[1];
-  char *op = db->query->data[2];
-  char *val = db->query->data[3];
 
   db->selectedRowsCount = 0;
+  db->selectedColumnsCount = 0;
+  char selectedcols[100];
+  strcpy(selectedcols,db->query->data[1]);
+  if(strcmp(selectedcols,"*") == 0) {
+    for(int i = 0; i < db->curr_table->cols; i++) {
+      db->selectedColumns[db->selectedColumnsCount++] = i;
+    }
+  }
+  else {
+    char* token = strtok(selectedcols, " , ");
+    db->selectedColumnsCount = 0;
+    while (token != NULL)
+    {
+      for(int i = 0; i < db->curr_table->cols; i++) {
+        if(strcmp(token,db->curr_table->columns[i]) == 0) {
+          db->selectedColumns[db->selectedColumnsCount++] = i;
+        }
+      }
+      token = strtok(NULL, " , ");
+    }
+  }
+
+  char *where = db->query->data[2];
+  if(strcmp(where,"WHERE") != 0) {
+    for(int i = 1; i < db->curr_table->rows; i++) {
+      db->selectedRows[db->selectedRowsCount++]=db->curr_table->table[i];
+    }
+    return 2;
+  }
+ 
+  char *col = db->query->data[3];
+  char *op = db->query->data[4];
+  char *val = db->query->data[5];
+
   int found = -1;
   for (int i = 0; i < MAX_COLS; i++)
   {
@@ -183,7 +216,7 @@ int handleSelect(struct Database *db) {
   }
   if (found == -1)
   {
-      printf("Feild not Found\n");
+      printf("Field not Found\n");
     return 0;
   }
   if (isNumber(val))
@@ -214,7 +247,7 @@ int handleSelect(struct Database *db) {
       }
     }
   }
-  printf("%d rows selected\n",db->selectedRowsCount);
+  //printf("%d rows selected\n",db->selectedRowsCount);
   return 1;
 }
 
@@ -238,7 +271,7 @@ int handleOR(struct Database *db, int offset_index)
   }
   if (found == -1)
   {
-    printf("Feild not Found\n");
+    printf("Field not Found\n");
     return 0;
   }
   int isnum = isNumber(val);
@@ -267,7 +300,7 @@ int handleOR(struct Database *db, int offset_index)
       db->selectedRows[db->selectedRowsCount++] = row;
     }
   }
-  printf("%d rows selected\n",db->selectedRowsCount);
+  //printf("%d rows selected\n",db->selectedRowsCount);
   return 1;
 }
 
@@ -277,15 +310,30 @@ void handlePrint(struct Database *db) {
     return;
   }
   if(db->selectedRowsCount<1){
-      printf("%d rows selected\n",db->selectedRowsCount);
+      // printf("%d rows selected\n",db->selectedRowsCount);
       return;
   }
   //for(int i=0;i<db->curr_table->cols;i++){
     //  printf("%s",db->curr_table->columns[i]);
   //}
+  for(int i = 0; i < db->selectedColumnsCount; i++) {
+    for(int j = i + 1; j < db->selectedColumnsCount; j++) {
+      if(db->selectedColumns[i] > db->selectedColumns[j]) {
+        int c = db->selectedColumns[i];
+        db->selectedColumns[i] = db->selectedColumns[j];
+        db->selectedColumns[j] = c;
+      }
+    }
+  }
+  printf("| ");
+  for(int i = 0; i < db->selectedColumnsCount; i++) {
+    printf("%-20s| ",db->curr_table->columns[db->selectedColumns[i]]);
+  }
+  printf("\n");
   for(int i = 0; i < db->selectedRowsCount;i++) {
-    for(int j = 0; j < MAX_COLS; j++) {
-      printf("%s ", db->selectedRows[i]->data[j]);
+    printf("| ");
+    for(int j = 0; j < db->selectedColumnsCount; j++) {
+      printf("%-20s| ", db->selectedRows[i]->data[db->selectedColumns[j]]);
     }
     printf("\n");
   }
@@ -332,11 +380,12 @@ void handleDelete(struct Database *db)
       table->table[j]->key--;
     }
   }
-
+/*
   for (int i = 1; i < db->curr_table->rows; i++)
   {
     printf("Currently : %s ", db->curr_table->table[i]->data[0]);
   }
+  */
 }
 
 void handleClear(struct Database *db)
@@ -413,7 +462,7 @@ void handleOrderBy(struct Database *db, int offset_index) {
       break;
     }
   }
-  printf("%s %d",col,found);
+  //printf("%s %d",col,found);
   int isNum = isNumber(db->curr_table->table[0]->data[found]);
   for(int i = 0; i < db->selectedRowsCount; i++) {
     for(int j = i + 1; j < db->selectedRowsCount; j++) {
@@ -435,8 +484,12 @@ void handleOrderBy(struct Database *db, int offset_index) {
 }
 
 int handleQuery(struct Database* db) {
-  handleSelect(db);
-  for(int i = 0; i < db->query->query_len; i+=4) {
+  // SELECT col1,co2,col3 where age > 10
+  int i = 2;
+  if(handleSelect(db)==2) {
+    i = 6;
+  };
+  for(; i < db->query->query_len; i+=4) {
     if (strcmp(db->query->data[i], "AND") == 0) {
       handleAnd(db, i);
     } else if (strcmp(db->query->data[i], "OR") == 0) {
@@ -446,6 +499,7 @@ int handleQuery(struct Database* db) {
       i-=2;
     }
   }
+  handlePrint(db);
   return 1;
 }
 

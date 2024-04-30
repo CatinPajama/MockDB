@@ -35,7 +35,9 @@ struct Database
 {
   struct Table *curr_table;
   int selectedRowsCount;
+  int selectedColumnsCount;
   struct Row *selectedRows[MAX_SELECTED_ROWS];
+  int selectedColumns[MAX_COLS];
   struct Query *query;
 };
 
