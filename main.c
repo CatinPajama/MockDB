@@ -53,6 +53,9 @@ int solve(struct Database *db) {
   else if(strcmp("LOAD", operator) == 0) {
     handleLoad(db);
   }
+  else if(strcmp("SCHEMA", operator) == 0) {
+    handleSchema(db);
+  }
   else if(strcmp("HELP", operator) == 0) {
     handleHelp();
   }

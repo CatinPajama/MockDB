@@ -503,4 +503,10 @@ int handleQuery(struct Database* db) {
   return 1;
 }
 
+void handleSchema(struct Database* db) {
+  for(int i = 0; i < db->curr_table->cols; i++) {
+    printf("%s ", db->curr_table->columns[i]);
+  }
+  printf("\n");
+}
 

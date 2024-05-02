@@ -95,4 +95,6 @@ void handlePrint(struct Database *db);
 void handleSave(struct Database *db);
 
 void handleOrderBy(struct Database *db, int offset_index);
+
+void handleSchema(struct Database *db);
 #endif
