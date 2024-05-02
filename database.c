@@ -248,7 +248,7 @@ int handleSelect(struct Database *db) {
     }
   }
   //printf("%d rows selected\n",db->selectedRowsCount);
-  return 1;
+  return 6; //Because we used 6 tokens of the query in this select
 }
 
 int handleOR(struct Database *db, int offset_index)
@@ -462,8 +462,10 @@ void handleOrderBy(struct Database *db, int offset_index) {
       break;
     }
   }
-  //printf("%s %d",col,found);
+
+  //We don't have data starting from 0th index
   int isNum = isNumber(db->curr_table->table[0]->data[found]);
+
   for(int i = 0; i < db->selectedRowsCount; i++) {
     for(int j = i + 1; j < db->selectedRowsCount; j++) {
       int firstMore=0;
@@ -485,10 +487,8 @@ void handleOrderBy(struct Database *db, int offset_index) {
 
 int handleQuery(struct Database* db) {
   // SELECT col1,co2,col3 where age > 10
-  int i = 2;
-  if(handleSelect(db)==2) {
-    i = 6;
-  };
+  int i = handleSelect(db);
+  printf("%d\n", i);
   for(; i < db->query->query_len; i+=4) {
     if (strcmp(db->query->data[i], "AND") == 0) {
       handleAnd(db, i);
