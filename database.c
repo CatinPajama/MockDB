@@ -488,7 +488,6 @@ void handleOrderBy(struct Database *db, int offset_index) {
 int handleQuery(struct Database* db) {
   // SELECT col1,co2,col3 where age > 10
   int i = handleSelect(db);
-  printf("%d\n", i);
   for(; i < db->query->query_len; i+=4) {
     if (strcmp(db->query->data[i], "AND") == 0) {
       handleAnd(db, i);
